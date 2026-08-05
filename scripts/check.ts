@@ -22,14 +22,24 @@ assert(result.evidence.some((trace) => trace.text.includes("Alpha Service calls 
 assert(result.evidence.some((trace) => trace.text.includes("Beta Gateway stores request state in Redis")));
 
 let contextHandler: ((event: any, ctx: any) => Promise<any>) | undefined;
+let compactHandler: ((event: any) => Promise<any>) | undefined;
 const fakePi = {
   on(name: string, handler: typeof contextHandler) {
     if (name === "context") contextHandler = handler;
+    if (name === "session_before_compact") compactHandler = handler;
   },
   registerCommand() {},
 };
 zeroMem(fakePi as never);
 assert(contextHandler);
+assert(compactHandler);
+assert.deepEqual(await compactHandler({ preparation: { firstKeptEntryId: "m12", tokensBefore: 50_000 } }), {
+  compaction: {
+    summary: "Earlier raw traces remain available through Zero-Mem retrieval.",
+    firstKeptEntryId: "m12",
+    tokensBefore: 50_000,
+  },
+});
 
 const current = { role: "user", content: "Which store is related to Alpha Service through its gateway?" };
 const transformed = await contextHandler(

@@ -31,5 +31,6 @@ bun run check
 - **Temporal hierarchy:** turn, sliding-window, and timestamp-gap episode scores.
 - **Routing and closure:** query cues select the primary view; normalized scores use the paper's `rho = 0.6`; five primary traces receive bounded graph and local neighbors.
 - **Calibration:** provenance filtering, deduplication, relevance ranking, and an explicit instruction that historical traces are evidence rather than current commands.
+- **Compaction:** Pi compaction uses a fixed non-generative checkpoint; original branch traces remain retrievable.
 
 This is a Pi-oriented implementation of the architecture, not a reproduction of the paper's reported benchmark. It replaces spaCy and BGE-M3 with deterministic lexical heuristics to avoid extra runtimes and encoder downloads. It indexes the current session branch only and does not rewrite final agent answers.

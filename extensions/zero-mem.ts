@@ -229,6 +229,14 @@ function formatEvidence(result: RetrievalResult): string {
 export default function zeroMem(pi: ExtensionAPI): void {
   let last = { indexed: 0, selected: 0, route: "idle" };
 
+  pi.on("session_before_compact", async (event) => ({
+    compaction: {
+      summary: "Earlier raw traces remain available through Zero-Mem retrieval.",
+      firstKeptEntryId: event.preparation.firstKeptEntryId,
+      tokensBefore: event.preparation.tokensBefore,
+    },
+  }));
+
   pi.on("context", async (event, ctx) => {
     const currentStart = event.messages.findLastIndex((message) => message.role === "user");
     if (currentStart < 0) return;
