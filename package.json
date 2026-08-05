@@ -1,0 +1,17 @@
+{
+  "name": "pi-zero-mem",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Zero-token dual-view memory retrieval for Pi",
+  "type": "module",
+  "keywords": ["pi-package"],
+  "scripts": {
+    "check": "bun scripts/check.ts"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "pi": {
+    "extensions": ["./extensions/zero-mem.ts"]
+  }
+}
