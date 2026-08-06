@@ -1,3 +1,5 @@
+![pi-zero-mem — zero-token memory retrieval for Pi](assets/pi-zero-mem-banner.png)
+
 # pi-zero-mem
 
 A Pi adaptation of [Zero-Mem: Zero-Token Memory Operations for LLM Agents](https://arxiv.org/abs/2607.29377).
