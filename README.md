@@ -2,7 +2,7 @@
 
 A Pi adaptation of [Zero-Mem: Zero-Token Memory Operations for LLM Agents](https://arxiv.org/abs/2607.29377).
 
-It keeps Pi's original session messages as the source of record, retrieves relevant old turns through graph and temporal views, and sends only the retrieved evidence plus the current turn to the reader model. spaCy extracts entities and BGE-M3 supplies dense relevance scores without LLM calls.
+It keeps Pi's original session messages as the source of record, retrieves relevant old turns through graph and temporal views, and sends only the retrieved evidence plus the current turn to the reader model. spaCy extracts typed entities and BGE-M3 supplies dense context, entity-alignment, and episode-continuity scores without LLM calls.
 
 ## Install
 
@@ -34,11 +34,12 @@ bun run check
 
 ## Paper mapping
 
-- **Raw trace substrate:** all message entries in the current Pi session tree, including sibling branches and messages hidden by compaction.
-- **Entity-context graph:** spaCy NER plus deterministic file/name extraction, co-occurrence edges, tree-adjacency edges, and personalized PageRank.
-- **Temporal hierarchy:** turn, sliding-window, and timestamp-gap episode scores.
-- **Routing and closure:** query cues select the primary view; normalized scores use the paper's `rho = 0.6`; five primary traces receive bounded graph and local neighbors.
-- **Calibration:** provenance filtering, deduplication, hybrid BM25/BGE-M3 ranking, XML escaping, and deterministic rejection of instruction-like historical traces.
+- **Raw trace substrate:** original messages on the active branch strictly before the current user turn, including messages hidden by compaction. Sibling branches and the ongoing tool loop are outside the historical boundary.
+- **Entity-context graph:** frequency-weighted spaCy/deterministic entities, dense query-entity alignment, relevance-weighted co-occurrence propagation, tree-adjacency edges, and convergent personalized PageRank.
+- **Temporal hierarchy:** semantic/time-bounded episodes, sliding windows, turns, and local spans searched coarse-to-fine.
+- **Routing and closure:** a deterministic subject/keyword/type/temporal/boundary profile selects the primary view; normalized scores use the paper's `rho = 0.6`; five primary traces receive bounded graph bridges and local neighbors.
+- **Calibration:** provenance and boundary filtering, deduplication, temporal conflict resolution, type-aware ranking, XML escaping, and deterministic rejection of instruction-like historical traces.
+- **Answer checks:** final short answers are conservatively calibrated when evidence provides a unique number/date correction or supports pruning an extractive list. Tool calls, long prose, code, and ambiguous answers are left unchanged; current-turn tool results participate only in these checks.
 - **Compaction:** Pi compaction uses a fixed non-generative checkpoint; original branch traces remain retrievable.
 
-This is a Pi-oriented implementation of the architecture, not a reproduction of the paper's reported benchmark. It does not rewrite final agent answers.
+This is a Pi-oriented implementation of the architecture, not a reproduction of the paper's reported benchmark. Thresholds that the paper does not publish use deterministic local defaults.
