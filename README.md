@@ -8,6 +8,7 @@ It keeps Pi's original session messages as the source of record, retrieves relev
 
 ```bash
 pi install .
+# pi uninstall .
 ```
 
 Set up the Python NLP worker once (BGE-M3 downloads from Hugging Face on first use):
