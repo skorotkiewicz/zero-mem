@@ -146,11 +146,15 @@ assert.equal(
 let contextHandler: ((event: any, ctx: any) => Promise<any>) | undefined;
 let compactHandler: ((event: any) => Promise<any>) | undefined;
 let messageEndHandler: ((event: any, ctx: any) => Promise<any>) | undefined;
+let sessionStartHandler: (() => Promise<any>) | undefined;
+let shutdownHandler: (() => Promise<any>) | undefined;
 const fakePi = {
   on(name: string, handler: any) {
     if (name === "context") contextHandler = handler;
     if (name === "session_before_compact") compactHandler = handler;
     if (name === "message_end") messageEndHandler = handler;
+    if (name === "session_start") sessionStartHandler = handler;
+    if (name === "session_shutdown") shutdownHandler = handler;
   },
   registerCommand() {},
 };
@@ -158,6 +162,9 @@ zeroMem(fakePi as never);
 assert(contextHandler);
 assert(compactHandler);
 assert(messageEndHandler);
+assert(sessionStartHandler);
+assert(shutdownHandler);
+await sessionStartHandler();
 assert.deepEqual(await compactHandler({ preparation: { firstKeptEntryId: "m12", tokensBefore: 50_000 } }), {
   compaction: {
     summary: "Earlier raw traces remain available through Zero-Mem retrieval.",
@@ -367,5 +374,6 @@ const fallbackContext = await fallbackContextHandler(
 assert.match(fallbackContext.messages[0].content, /Tiny Project uses SQLite/);
 if (originalPython === undefined) delete process.env.ZERO_MEM_PYTHON;
 else process.env.ZERO_MEM_PYTHON = originalPython;
+await shutdownHandler();
 
 console.log("zero-mem check passed");

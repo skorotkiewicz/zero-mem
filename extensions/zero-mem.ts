@@ -761,7 +761,8 @@ class NlpWorker {
     this.child = undefined;
   }
 
-  private start(): void {
+  start(): void {
+    if (this.child || this.failure) return;
     const script = fileURLToPath(new URL("../scripts/zero-mem-nlp.py", import.meta.url));
     const python = process.env.ZERO_MEM_PYTHON || "python3";
     this.child = spawn(python, [script], { stdio: ["pipe", "pipe", "pipe"] });
@@ -809,6 +810,7 @@ export default function zeroMem(pi: ExtensionAPI): void {
   let activeCalibration: { query: string; evidence: TraceUnit[] } | undefined;
   const nlp = new NlpWorker();
 
+  pi.on("session_start", async () => nlp.start());
   pi.on("session_before_compact", async (event) => ({
     compaction: {
       summary: "Earlier raw traces remain available through Zero-Mem retrieval.",

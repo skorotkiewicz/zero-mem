@@ -7,10 +7,12 @@ import sys
 
 import spacy
 from sentence_transformers import SentenceTransformer
+from transformers.utils import logging as transformers_logging
 
 SPACY_MODEL = os.getenv("ZERO_MEM_SPACY_MODEL", "en_core_web_sm")
 BGE_MODEL = os.getenv("ZERO_MEM_BGE_MODEL", "BAAI/bge-m3")
 
+transformers_logging.disable_progress_bar()
 nlp = spacy.load(SPACY_MODEL, disable=["parser", "tagger", "lemmatizer", "attribute_ruler"])
 encoder = SentenceTransformer(BGE_MODEL, device=os.getenv("ZERO_MEM_DEVICE") or None)
 entity_cache: dict[str, list[tuple[str, str]]] = {}
