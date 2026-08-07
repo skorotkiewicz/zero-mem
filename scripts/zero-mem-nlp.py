@@ -14,7 +14,7 @@ BGE_MODEL = os.getenv("ZERO_MEM_BGE_MODEL", "BAAI/bge-m3")
 
 transformers_logging.disable_progress_bar()
 nlp = spacy.load(SPACY_MODEL, disable=["parser", "tagger", "lemmatizer", "attribute_ruler"])
-encoder = SentenceTransformer(BGE_MODEL, device=os.getenv("ZERO_MEM_DEVICE") or None)
+encoder = SentenceTransformer(BGE_MODEL, device=os.getenv("ZERO_MEM_DEVICE") or None, model_kwargs={"torch_dtype": "float16"})
 entity_cache: dict[str, list[tuple[str, str]]] = {}
 embedding_cache: dict[str, object] = {}
 query_embedding_cache: dict[str, object] = {}

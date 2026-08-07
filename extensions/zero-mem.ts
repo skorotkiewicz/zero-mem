@@ -780,7 +780,7 @@ class NlpWorker {
     });
     this.child.stderr!.on("data", (chunk: string) => this.stderr = (this.stderr + chunk).slice(-2000));
     this.child.on("error", (error) => this.fail(error.message));
-    this.child.on("exit", (code) => this.fail(this.stderr.trim() || `NLP worker exited with code ${code}`));
+    this.child.on("exit", (code, signal) => this.fail(this.stderr.trim() || `NLP worker exited with ${signal ? `signal ${signal}` : `code ${code}`}`));
   }
 
   private handleLine(line: string): void {
