@@ -1,6 +1,6 @@
 [project]
 name = "pi-zero-mem-nlp"
-version = "0.1.0"
+version = "0.1.1"
 description = "spaCy and BGE-M3 runtime for pi-zero-mem"
 requires-python = ">=3.10,<3.14"
 dependencies = [
