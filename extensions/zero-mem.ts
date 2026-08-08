@@ -17,6 +17,14 @@ const HIERARCHY_WINDOW_LIMIT = 8;
 const SEMANTIC_EPISODE_THRESHOLD = 0.25;
 const ANSWER_CALIBRATION_LIMIT = 240;
 
+export type RetrievalMode = "lexical-only" | "semantic-only" | "hybrid";
+
+export function parseRetrievalMode(value: string | undefined): RetrievalMode {
+  const mode = value?.trim().toLowerCase() || "hybrid";
+  if (mode === "lexical-only" || mode === "semantic-only" || mode === "hybrid") return mode;
+  throw new Error(`Invalid MODE "${value}"; expected lexical-only, semantic-only, or hybrid`);
+}
+
 const STOP_WORDS = new Set([
   "a", "an", "and", "are", "as", "at", "be", "been", "by", "for", "from", "how", "i", "in", "is",
   "it", "of", "on", "or", "that", "the", "this", "to", "was", "were", "what", "when", "where", "which",
@@ -624,23 +632,32 @@ export function retrieveEvidence(
   entitySeedScores: Readonly<Record<string, number>> = {},
   adjacencyScores: readonly number[] = [],
   boundary?: string,
+  mode: RetrievalMode = "hybrid",
 ): RetrievalResult {
   const queryTerms = tokenize(query);
-  const profile = buildQueryProfile(query, queryEntities, boundary);
+  const profile = buildQueryProfile(query, mode === "lexical-only" ? [] : queryEntities, boundary);
   const route = profile.route;
   const lexical = normalize(bm25(traces, queryTerms));
-  const dense = denseScores.length === traces.length ? normalize(denseScores) : lexical.map(() => 0);
-  const relevance = lexical.map((score, index) => denseScores.length === traces.length
-    ? (1 - DENSE_WEIGHT) * score + DENSE_WEIGHT * dense[index]
-    : score);
+  const hasDense = denseScores.length === traces.length;
+  const dense = hasDense ? normalize(denseScores) : lexical.map(() => 0);
+  const relevance = mode === "lexical-only" || !hasDense
+    ? lexical
+    : mode === "semantic-only"
+      ? dense
+      : lexical.map((score, index) => (1 - DENSE_WEIGHT) * score + DENSE_WEIGHT * dense[index]);
   const graph = normalize(graphScores(
     traces,
-    denseScores.length === traces.length ? dense : relevance,
-    lexical,
+    hasDense && mode !== "lexical-only" ? dense : relevance,
+    mode === "semantic-only" ? lexical.map(() => 0) : lexical,
     queryTerms,
-    entitySeedScores,
+    mode === "lexical-only" ? {} : entitySeedScores,
   ));
-  const hierarchy = normalize(hierarchyScores(traces, relevance, profile, adjacencyScores));
+  const hierarchy = normalize(hierarchyScores(
+    traces,
+    relevance,
+    profile,
+    mode === "lexical-only" ? [] : adjacencyScores,
+  ));
   const fused = traces.map((_, index) => route === "relational"
     ? RHO * graph[index] + (1 - RHO) * hierarchy[index]
     : RHO * hierarchy[index] + (1 - RHO) * graph[index]);
@@ -806,11 +823,14 @@ class NlpWorker {
 }
 
 export default function zeroMem(pi: ExtensionAPI): void {
-  let last = { indexed: 0, selected: 0, blocked: 0, route: "idle", engine: "not run" };
+  const mode = parseRetrievalMode(process.env.MODE);
+  let last = { indexed: 0, selected: 0, blocked: 0, route: "idle", engine: `${mode} (not run)` };
   let activeCalibration: { query: string; evidence: TraceUnit[] } | undefined;
   const nlp = new NlpWorker();
 
-  pi.on("session_start", async () => nlp.start());
+  pi.on("session_start", async () => {
+    if (mode !== "lexical-only") nlp.start();
+  });
   pi.on("session_before_compact", async (event) => ({
     compaction: {
       summary: "Earlier raw traces remain available through Zero-Mem retrieval.",
@@ -863,21 +883,35 @@ export default function zeroMem(pi: ExtensionAPI): void {
     }
 
     let analysis: NlpAnalysis | undefined;
-    let engine = "spaCy + BGE-M3";
-    try {
-      analysis = await nlp.analyze(
-        query,
-        history.map((trace) => trace.text),
-        history.map((trace) => trace.entities),
-        extractEntities(query),
-      );
-      history = history.map((trace, index) => mergeNlpEntities(
-        trace,
-        analysis!.entities[index] ?? [],
-        analysis!.entityTypes[index] ?? {},
-      ));
-    } catch (error) {
-      engine = `lexical fallback (${error instanceof Error ? error.message.split("\n")[0] : String(error)})`;
+    let engine = mode;
+    if (mode !== "lexical-only") {
+      engine = `${mode} (spaCy + BGE-M3)`;
+      try {
+        analysis = await nlp.analyze(
+          query,
+          history.map((trace) => trace.text),
+          history.map((trace) => trace.entities),
+          extractEntities(query),
+        );
+        history = history.map((trace, index) => mergeNlpEntities(
+          trace,
+          analysis!.entities[index] ?? [],
+          analysis!.entityTypes[index] ?? {},
+        ));
+      } catch (error) {
+        const message = error instanceof Error ? error.message.split("\n")[0] : String(error);
+        if (mode === "semantic-only") {
+          last = {
+            indexed: history.length,
+            selected: 0,
+            blocked,
+            route: buildQueryProfile(query, [], boundary).route,
+            engine: `semantic-only unavailable (${message})`,
+          };
+          return;
+        }
+        engine = `hybrid; lexical fallback (${message})`;
+      }
     }
 
     const result = retrieveEvidence(
@@ -888,6 +922,7 @@ export default function zeroMem(pi: ExtensionAPI): void {
       analysis?.entitySeedScores,
       analysis?.adjacencyScores,
       boundary,
+      mode,
     );
     if (!result.evidence.length) {
       if (currentTurnEvidence.length) activeCalibration = { query, evidence: currentTurnEvidence };

@@ -4,6 +4,7 @@ import zeroMem, {
   calibrateAnswerText,
   entriesBeforeCurrentTurn,
   isUnsafeHistoricalTrace,
+  parseRetrievalMode,
   retrieveEvidence,
   tracesFromEntries,
 } from "../extensions/zero-mem.ts";
@@ -46,6 +47,22 @@ assert.equal(tracesFromEntries([{
 assert.equal(buildQueryProfile("How is Alpha Service connected to Redis?").route, "relational");
 assert.equal(buildQueryProfile("When was Alpha Service last deployed?").route, "local");
 assert.equal(buildQueryProfile("How many replicas run?").answerType, "number");
+assert.equal(parseRetrievalMode(undefined), "hybrid");
+assert.equal(parseRetrievalMode(" LEXICAL-ONLY "), "lexical-only");
+assert.throws(() => parseRetrievalMode("invalid"), /Invalid MODE/);
+
+const modeTraces = tracesFromEntries([
+  { type: "message", id: "lexical", parentId: null, message: { role: "assistant", content: "database database database" } },
+  { type: "message", id: "semantic", parentId: null, message: { role: "assistant", content: "persistent storage engine" } },
+]);
+assert.equal(
+  retrieveEvidence(modeTraces, "database", [0, 1], [], {}, [], undefined, "lexical-only").evidence[0].id,
+  "lexical",
+);
+assert.equal(
+  retrieveEvidence(modeTraces, "database", [0, 1], [], {}, [], undefined, "semantic-only").evidence[0].id,
+  "semantic",
+);
 
 const semantic = tracesFromEntries([
   { type: "message", id: "car", parentId: null, message: { role: "user", content: "A mechanic repaired the vehicle." } },
@@ -148,6 +165,8 @@ let compactHandler: ((event: any) => Promise<any>) | undefined;
 let messageEndHandler: ((event: any, ctx: any) => Promise<any>) | undefined;
 let sessionStartHandler: (() => Promise<any>) | undefined;
 let shutdownHandler: (() => Promise<any>) | undefined;
+const originalMode = process.env.MODE;
+delete process.env.MODE;
 const fakePi = {
   on(name: string, handler: any) {
     if (name === "context") contextHandler = handler;
@@ -372,8 +391,58 @@ const fallbackContext = await fallbackContextHandler(
   { sessionManager: { getEntries: () => shortEntries, getLeafId: () => "short-query" } },
 );
 assert.match(fallbackContext.messages[0].content, /Tiny Project uses SQLite/);
+
+process.env.MODE = "semantic-only";
+let semanticOnlyContextHandler: ((event: any, ctx: any) => Promise<any>) | undefined;
+let semanticOnlyCommandHandler: ((args: string, ctx: any) => Promise<any>) | undefined;
+zeroMem({
+  on(name: string, handler: any) {
+    if (name === "context") semanticOnlyContextHandler = handler;
+  },
+  registerCommand(name: string, command: any) {
+    if (name === "zero-mem") semanticOnlyCommandHandler = command.handler;
+  },
+} as never);
+assert(semanticOnlyContextHandler);
+assert(semanticOnlyCommandHandler);
+assert.equal(await semanticOnlyContextHandler(
+  { messages: [shortEntries[1].message] },
+  { sessionManager: { getEntries: () => shortEntries, getLeafId: () => "short-query" } },
+), undefined);
+let semanticOnlyStatus = "";
+await semanticOnlyCommandHandler("", { ui: { notify: (message: string) => semanticOnlyStatus = message } });
+assert.match(semanticOnlyStatus, /semantic-only unavailable/);
+
+process.env.MODE = "lexical-only";
+let lexicalOnlyContextHandler: ((event: any, ctx: any) => Promise<any>) | undefined;
+let lexicalOnlyStartHandler: (() => Promise<any>) | undefined;
+let lexicalOnlyCommandHandler: ((args: string, ctx: any) => Promise<any>) | undefined;
+zeroMem({
+  on(name: string, handler: any) {
+    if (name === "context") lexicalOnlyContextHandler = handler;
+    if (name === "session_start") lexicalOnlyStartHandler = handler;
+  },
+  registerCommand(name: string, command: any) {
+    if (name === "zero-mem") lexicalOnlyCommandHandler = command.handler;
+  },
+} as never);
+assert(lexicalOnlyContextHandler);
+assert(lexicalOnlyStartHandler);
+assert(lexicalOnlyCommandHandler);
+await lexicalOnlyStartHandler();
+const lexicalOnlyContext = await lexicalOnlyContextHandler(
+  { messages: [shortEntries[1].message] },
+  { sessionManager: { getEntries: () => shortEntries, getLeafId: () => "short-query" } },
+);
+assert.match(lexicalOnlyContext.messages[0].content, /Tiny Project uses SQLite/);
+let lexicalOnlyStatus = "";
+await lexicalOnlyCommandHandler("", { ui: { notify: (message: string) => lexicalOnlyStatus = message } });
+assert.match(lexicalOnlyStatus, /; lexical-only; indexed/);
+
 if (originalPython === undefined) delete process.env.ZERO_MEM_PYTHON;
 else process.env.ZERO_MEM_PYTHON = originalPython;
+if (originalMode === undefined) delete process.env.MODE;
+else process.env.MODE = originalMode;
 await shutdownHandler();
 
 console.log("zero-mem check passed");
