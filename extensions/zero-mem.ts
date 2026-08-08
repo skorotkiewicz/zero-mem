@@ -22,7 +22,7 @@ export type RetrievalMode = "lexical-only" | "semantic-only" | "hybrid";
 export function parseRetrievalMode(value: string | undefined): RetrievalMode {
   const mode = value?.trim().toLowerCase() || "hybrid";
   if (mode === "lexical-only" || mode === "semantic-only" || mode === "hybrid") return mode;
-  throw new Error(`Invalid MODE "${value}"; expected lexical-only, semantic-only, or hybrid`);
+  throw new Error(`Invalid ZERO_MEM_MODE "${value}"; expected lexical-only, semantic-only, or hybrid`);
 }
 
 const STOP_WORDS = new Set([
@@ -823,7 +823,7 @@ class NlpWorker {
 }
 
 export default function zeroMem(pi: ExtensionAPI): void {
-  const mode = parseRetrievalMode(process.env.MODE);
+  const mode = parseRetrievalMode(process.env.ZERO_MEM_MODE);
   let last = { indexed: 0, selected: 0, blocked: 0, route: "idle", engine: `${mode} (not run)` };
   let activeCalibration: { query: string; evidence: TraceUnit[] } | undefined;
   const nlp = new NlpWorker();

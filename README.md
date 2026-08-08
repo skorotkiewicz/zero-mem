@@ -19,16 +19,16 @@ Set up the Python NLP worker once (BGE-M3 downloads from Hugging Face on first u
 uv sync --python 3.12
 uv run python -m spacy download en_core_web_sm
 export ZERO_MEM_PYTHON="$PWD/.venv/bin/python"
-export MODE=hybrid
+export ZERO_MEM_MODE=hybrid
 ```
 
-`MODE` accepts one value:
+`ZERO_MEM_MODE` accepts one value:
 
 - `lexical-only` — BM25/lexical retrieval; does not start Python or load models.
 - `semantic-only` — dense spaCy + BGE-M3 retrieval; reports unavailable instead of falling back.
 - `hybrid` — combines lexical and dense scores, with lexical fallback if NLP fails (default).
 
-Restart Pi after changing `MODE`.
+Restart Pi after changing `ZERO_MEM_MODE`.
 
 For development:
 

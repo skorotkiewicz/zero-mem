@@ -49,7 +49,7 @@ assert.equal(buildQueryProfile("When was Alpha Service last deployed?").route, "
 assert.equal(buildQueryProfile("How many replicas run?").answerType, "number");
 assert.equal(parseRetrievalMode(undefined), "hybrid");
 assert.equal(parseRetrievalMode(" LEXICAL-ONLY "), "lexical-only");
-assert.throws(() => parseRetrievalMode("invalid"), /Invalid MODE/);
+assert.throws(() => parseRetrievalMode("invalid"), /Invalid ZERO_MEM_MODE/);
 
 const modeTraces = tracesFromEntries([
   { type: "message", id: "lexical", parentId: null, message: { role: "assistant", content: "database database database" } },
@@ -165,8 +165,8 @@ let compactHandler: ((event: any) => Promise<any>) | undefined;
 let messageEndHandler: ((event: any, ctx: any) => Promise<any>) | undefined;
 let sessionStartHandler: (() => Promise<any>) | undefined;
 let shutdownHandler: (() => Promise<any>) | undefined;
-const originalMode = process.env.MODE;
-delete process.env.MODE;
+const originalMode = process.env.ZERO_MEM_MODE;
+delete process.env.ZERO_MEM_MODE;
 const fakePi = {
   on(name: string, handler: any) {
     if (name === "context") contextHandler = handler;
@@ -392,7 +392,7 @@ const fallbackContext = await fallbackContextHandler(
 );
 assert.match(fallbackContext.messages[0].content, /Tiny Project uses SQLite/);
 
-process.env.MODE = "semantic-only";
+process.env.ZERO_MEM_MODE = "semantic-only";
 let semanticOnlyContextHandler: ((event: any, ctx: any) => Promise<any>) | undefined;
 let semanticOnlyCommandHandler: ((args: string, ctx: any) => Promise<any>) | undefined;
 zeroMem({
@@ -413,7 +413,7 @@ let semanticOnlyStatus = "";
 await semanticOnlyCommandHandler("", { ui: { notify: (message: string) => semanticOnlyStatus = message } });
 assert.match(semanticOnlyStatus, /semantic-only unavailable/);
 
-process.env.MODE = "lexical-only";
+process.env.ZERO_MEM_MODE = "lexical-only";
 let lexicalOnlyContextHandler: ((event: any, ctx: any) => Promise<any>) | undefined;
 let lexicalOnlyStartHandler: (() => Promise<any>) | undefined;
 let lexicalOnlyCommandHandler: ((args: string, ctx: any) => Promise<any>) | undefined;
@@ -441,8 +441,8 @@ assert.match(lexicalOnlyStatus, /; lexical-only; indexed/);
 
 if (originalPython === undefined) delete process.env.ZERO_MEM_PYTHON;
 else process.env.ZERO_MEM_PYTHON = originalPython;
-if (originalMode === undefined) delete process.env.MODE;
-else process.env.MODE = originalMode;
+if (originalMode === undefined) delete process.env.ZERO_MEM_MODE;
+else process.env.ZERO_MEM_MODE = originalMode;
 await shutdownHandler();
 
 console.log("zero-mem check passed");
