@@ -20,7 +20,7 @@ const ANSWER_CALIBRATION_LIMIT = 240;
 export type RetrievalMode = "lexical-only" | "semantic-only" | "hybrid";
 
 export function parseRetrievalMode(value: string | undefined): RetrievalMode {
-  const mode = value?.trim().toLowerCase() || "hybrid";
+  const mode = value?.trim().toLowerCase() || "lexical-only";
   if (mode === "lexical-only" || mode === "semantic-only" || mode === "hybrid") return mode;
   throw new Error(`Invalid ZERO_MEM_MODE "${value}"; expected lexical-only, semantic-only, or hybrid`);
 }
@@ -632,7 +632,7 @@ export function retrieveEvidence(
   entitySeedScores: Readonly<Record<string, number>> = {},
   adjacencyScores: readonly number[] = [],
   boundary?: string,
-  mode: RetrievalMode = "hybrid",
+  mode: RetrievalMode = "lexical-only",
 ): RetrievalResult {
   const queryTerms = tokenize(query);
   const profile = buildQueryProfile(query, mode === "lexical-only" ? [] : queryEntities, boundary);

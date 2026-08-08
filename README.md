@@ -20,7 +20,7 @@ pi install .
 # pi uninstall .
 ```
 
-Set up the Python NLP worker once (BGE-M3 downloads from Hugging Face on first use):
+`lexical-only` is the default and needs no Python setup. For semantic or hybrid retrieval, set up the NLP worker (BGE-M3 downloads from Hugging Face on first use):
 
 ```bash
 uv sync --python 3.12
@@ -31,9 +31,9 @@ export ZERO_MEM_MODE=hybrid
 
 `ZERO_MEM_MODE` accepts one value:
 
-- `lexical-only` — BM25/lexical retrieval; does not start Python or load models.
+- `lexical-only` — BM25/lexical retrieval; does not start Python or load models (default).
 - `semantic-only` — dense spaCy + BGE-M3 retrieval; reports unavailable instead of falling back.
-- `hybrid` — combines lexical and dense scores, with lexical fallback if NLP fails (default).
+- `hybrid` — combines lexical and dense scores, with lexical fallback if NLP fails.
 
 Restart Pi after changing `ZERO_MEM_MODE`.
 

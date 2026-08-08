@@ -47,7 +47,7 @@ assert.equal(tracesFromEntries([{
 assert.equal(buildQueryProfile("How is Alpha Service connected to Redis?").route, "relational");
 assert.equal(buildQueryProfile("When was Alpha Service last deployed?").route, "local");
 assert.equal(buildQueryProfile("How many replicas run?").answerType, "number");
-assert.equal(parseRetrievalMode(undefined), "hybrid");
+assert.equal(parseRetrievalMode(undefined), "lexical-only");
 assert.equal(parseRetrievalMode(" LEXICAL-ONLY "), "lexical-only");
 assert.throws(() => parseRetrievalMode("invalid"), /Invalid ZERO_MEM_MODE/);
 
@@ -56,7 +56,7 @@ const modeTraces = tracesFromEntries([
   { type: "message", id: "semantic", parentId: null, message: { role: "assistant", content: "persistent storage engine" } },
 ]);
 assert.equal(
-  retrieveEvidence(modeTraces, "database", [0, 1], [], {}, [], undefined, "lexical-only").evidence[0].id,
+  retrieveEvidence(modeTraces, "database", [0, 1]).evidence[0].id,
   "lexical",
 );
 assert.equal(
@@ -68,7 +68,7 @@ const semantic = tracesFromEntries([
   { type: "message", id: "car", parentId: null, message: { role: "user", content: "A mechanic repaired the vehicle." } },
   { type: "message", id: "other", parentId: null, message: { role: "user", content: "Automobile repair was not discussed here." } },
 ]);
-const semanticResult = retrieveEvidence(semantic, "Who fixed the automobile?", [0.95, 0.05]);
+const semanticResult = retrieveEvidence(semantic, "Who fixed the automobile?", [0.95, 0.05], [], {}, [], undefined, "hybrid");
 assert.equal(semanticResult.evidence[0].id, "car");
 
 const aligned = tracesFromEntries([
@@ -81,6 +81,9 @@ const alignedResult = retrieveEvidence(
   [],
   ["transport"],
   { vehicle: 0.92 },
+  [],
+  undefined,
+  "hybrid",
 );
 assert.equal(alignedResult.evidence[0].id, "vehicle");
 
@@ -107,6 +110,8 @@ const temporalResult = retrieveEvidence(
   ["alpha service"],
   {},
   [1, 0.8],
+  undefined,
+  "hybrid",
 );
 assert(temporalResult.evidence.some((trace) => trace.id === "new-replicas"));
 assert(!temporalResult.evidence.some((trace) => trace.id === "old-replicas"));
@@ -134,6 +139,8 @@ const scalarTemporalResult = retrieveEvidence(
   ["alpha service"],
   {},
   [1, 0.8],
+  undefined,
+  "hybrid",
 );
 assert(scalarTemporalResult.evidence.some((trace) => trace.id === "new-database"));
 assert(!scalarTemporalResult.evidence.some((trace) => trace.id === "old-database"));
