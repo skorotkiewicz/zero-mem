@@ -9,6 +9,13 @@ It keeps Pi's original session messages as the source of record, retrieves relev
 ## Install
 
 ```bash
+pi install git:github.com/skorotkiewicz/zero-mem
+# pi uninstall git:github.com/skorotkiewicz/zero-mem
+```
+
+From a local clone:
+
+```bash
 pi install .
 # pi uninstall .
 ```
