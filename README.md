@@ -1,4 +1,4 @@
-![pi-zero-mem — zero-token memory retrieval for Pi](assets/pi-zero-mem-banner.png)
+![pi-zero-mem — zero-token memory retrieval for Pi](assets/pi-zero-mem-banner-v2.png)
 
 # pi-zero-mem
 
