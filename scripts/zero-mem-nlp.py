@@ -15,6 +15,7 @@ BGE_MODEL = os.getenv("ZERO_MEM_BGE_MODEL", "BAAI/bge-m3")
 transformers_logging.disable_progress_bar()
 nlp = spacy.load(SPACY_MODEL, disable=["parser", "tagger", "lemmatizer", "attribute_ruler"])
 encoder = SentenceTransformer(BGE_MODEL, device=os.getenv("ZERO_MEM_DEVICE") or None, model_kwargs={"torch_dtype": "float16"})
+encoder.max_seq_length = 512
 entity_cache: dict[str, list[tuple[str, str]]] = {}
 embedding_cache: dict[str, object] = {}
 query_embedding_cache: dict[str, object] = {}
@@ -49,7 +50,7 @@ def entity_types_for(texts: list[str]) -> list[dict[str, list[str]]]:
 def embeddings_for(texts: list[str]) -> list[object]:
     missing = list(dict.fromkeys(text for text in texts if text not in embedding_cache))
     if missing:
-        vectors = encoder.encode_document(missing, batch_size=32, normalize_embeddings=True, show_progress_bar=False)
+        vectors = encoder.encode_document(missing, batch_size=4, normalize_embeddings=True, show_progress_bar=False)
         embedding_cache.update(zip(missing, vectors))
     return [embedding_cache[text] for text in texts]
 
@@ -57,7 +58,7 @@ def embeddings_for(texts: list[str]) -> list[object]:
 def query_embeddings_for(texts: list[str]) -> list[object]:
     missing = list(dict.fromkeys(text for text in texts if text not in query_embedding_cache))
     if missing:
-        vectors = encoder.encode_query(missing, batch_size=32, normalize_embeddings=True, show_progress_bar=False)
+        vectors = encoder.encode_query(missing, batch_size=4, normalize_embeddings=True, show_progress_bar=False)
         query_embedding_cache.update(zip(missing, vectors))
     return [query_embedding_cache[text] for text in texts]
 
